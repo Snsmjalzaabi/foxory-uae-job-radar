@@ -1,0 +1,58 @@
+name: Bug report
+description: Report broken behavior in Foxory UAE Job Radar
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not include passwords, tokens, private email contents, Telegram chat IDs, or other sensitive data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the broken behavior and what you expected instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - n8n workflow / import
+        - Email / IMAP
+        - Parsing / extraction
+        - UAE location detection
+        - Match scoring
+        - Duplicate detection
+        - Telegram notification
+        - Google Sheets / CSV tracking
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: n8n_version
+    attributes:
+      label: n8n version
+      placeholder: e.g. 1.x
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic/redacted examples only.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized output
+      description: Remove credentials, personal data, full private emails, tokens, IDs, and private URLs.
+      render: shell
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, personal information, and private job-application data from this report.
+          required: true
