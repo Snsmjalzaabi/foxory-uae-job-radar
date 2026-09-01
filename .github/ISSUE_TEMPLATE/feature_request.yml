@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest an improvement for Foxory UAE Job Radar
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Foxory UAE Job Radar is intended to stay generic, UAE-wide, privacy-conscious, and free to self-host at its core.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What problem would this feature solve for UAE job seekers?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the outcome rather than prescribing every implementation detail.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Primary area
+      options:
+        - Email source support
+        - UAE location / Emirate matching
+        - Role / keyword matching
+        - Scoring
+        - UAE National / Emiratisation signals
+        - Work mode / employment type
+        - Notifications
+        - Tracking / reporting
+        - n8n deployment / reliability
+        - Documentation / onboarding
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Project principles
+      options:
+        - label: The core feature can work without requiring a paid AI/API service, or has a free fallback.
+        - label: The proposal does not require scraping or automated login to job websites.
+        - label: The proposal can be configured generically rather than hardcoded for one person.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Add mockups, synthetic examples, or public documentation links if useful. Do not include personal data or credentials.
