@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive architecture for Foxory UAE Job Radar">
+  <title>Foxory UAE Job Radar — Interactive Architecture</title>
+  <style>
+    :root {
+      --bg: #07111f; --panel: #0d1b2e; --panel-2: #12243c; --text: #edf6ff;
+      --muted: #98abc2; --line: #38516f; --accent: #63e6be; --accent-2: #5aa9ff;
+      --warning: #ffc857; --danger: #ff7b8b; --shadow: 0 18px 50px rgba(0,0,0,.28);
+    }
+    html[data-theme="light"] {
+      --bg: #eef4f8; --panel: #ffffff; --panel-2: #f3f7fa; --text: #12233a;
+      --muted: #5d7087; --line: #b8c7d7; --accent: #087f5b; --accent-2: #1769aa;
+      --warning: #b66b00; --danger: #c92a3b; --shadow: 0 14px 34px rgba(28,54,78,.14);
+    }
+    html[data-theme="desert"] {
+      --bg: #211a17; --panel: #30251f; --panel-2: #3b2d25; --text: #fff7e7;
+      --muted: #d3bda8; --line: #725b4c; --accent: #62d6a8; --accent-2: #f0aa59;
+      --warning: #ffd166; --danger: #ff8e86; --shadow: 0 18px 50px rgba(0,0,0,.32);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--text); background:
+      radial-gradient(circle at 20% -10%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 35%),
+      var(--bg); font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+    button, select { font: inherit; }
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr; }
+    header { display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 24px 30px 18px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .mark { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; color: #03251c;
+      background: linear-gradient(135deg, var(--accent), #a8ffe5); box-shadow: 0 9px 26px color-mix(in srgb, var(--accent) 28%, transparent); font-size: 25px; }
+    h1 { margin: 0; font-size: clamp(20px, 3vw, 30px); letter-spacing: -.03em; }
+    .subtitle { margin: 2px 0 0; color: var(--muted); }
+    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; color: var(--muted); white-space: nowrap; }
+    .toolbar { margin: 0 30px 16px; padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      background: color-mix(in srgb, var(--panel) 91%, transparent); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+    .group { display: flex; gap: 6px; align-items: center; padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--line); }
+    .group:last-child { border-right: 0; margin-left: auto; }
+    button, select { color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px; cursor: pointer; }
+    button:hover, button:focus-visible, select:hover { border-color: var(--accent); outline: none; }
+    button.active { color: #06231b; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+    main { min-height: 0; padding: 0 30px 28px; display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 16px; }
+    .viewport { min-height: 640px; overflow: hidden; position: relative; border: 1px solid var(--line); border-radius: 20px;
+      background: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px), var(--panel);
+      background-size: 32px 32px; box-shadow: var(--shadow); cursor: grab; }
+    .viewport.dragging { cursor: grabbing; }
+    .canvas { width: 1620px; height: 640px; position: absolute; transform-origin: 0 0; transition: transform .18s ease; }
+    .edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .edge { fill: none; stroke: var(--line); stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+    .edge.hot { stroke: var(--accent); }
+    .edge.track { stroke: var(--accent-2); }
+    .edge.low { stroke: var(--warning); }
+    .node { position: absolute; width: 176px; min-height: 118px; padding: 15px; border: 1px solid var(--line); border-radius: 17px;
+      color: var(--text); background: linear-gradient(145deg, var(--panel-2), var(--panel)); box-shadow: 0 14px 26px rgba(0,0,0,.18); cursor: pointer; transition: .2s ease; }
+    .node:hover, .node.selected { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 18%, transparent); }
+    .node.dim { opacity: .18; filter: saturate(.35); }
+    .node.pulse { animation: pulse 1.1s ease 2; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); } }
+    .icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; margin-bottom: 9px; background: color-mix(in srgb, var(--accent-2) 20%, transparent); }
+    .node strong { display: block; font-size: 15px; }
+    .node small { display: block; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+    .chip { display: inline-block; margin-top: 9px; padding: 3px 7px; border-radius: 999px; color: var(--muted); background: var(--bg); font-size: 11px; }
+    .side { border: 1px solid var(--line); border-radius: 20px; background: var(--panel); box-shadow: var(--shadow); padding: 20px; overflow: auto; }
+    .side h2 { margin: 0 0 8px; font-size: 19px; }
+    .side p { color: var(--muted); margin: 0 0 16px; }
+    .side h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); margin: 22px 0 8px; }
+    .side ul { margin: 0; padding-left: 18px; color: var(--muted); }
+    .side li + li { margin-top: 6px; }
+    .legend { display: grid; grid-template-columns: 12px 1fr; gap: 7px 9px; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--accent); }
+    .dot.track { background: var(--accent-2); } .dot.low { background: var(--warning); }
+    .notice { padding: 11px 12px; border-radius: 12px; background: color-mix(in srgb, var(--warning) 12%, transparent); color: var(--muted); border: 1px solid color-mix(in srgb, var(--warning) 38%, var(--line)); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    @media (max-width: 900px) { header { align-items: flex-start; } .badge { display:none; } main { grid-template-columns: 1fr; } .side { min-height: 280px; } .viewport { min-height: 560px; } .group:last-child { margin-left: 0; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="mark" aria-hidden="true">🦊</div><div><h1>Foxory UAE Job Radar</h1><p class="subtitle">Interactive, privacy-aware n8n architecture</p></div></div>
+      <span class="badge">Email in · explainable score · alerts out</span>
+    </header>
+    <nav class="toolbar" aria-label="Diagram controls">
+      <div class="group" aria-label="Guided views">
+        <button class="view active" data-view="all">Full flow</button>
+        <button class="view" data-view="intake">Intake</button>
+        <button class="view" data-view="matching">Matching</button>
+        <button class="view" data-view="outputs">Outputs</button>
+      </div>
+      <div class="group" aria-label="Zoom">
+        <button id="zoomOut" aria-label="Zoom out">−</button>
+        <button id="fit">Fit</button>
+        <button id="zoomIn" aria-label="Zoom in">+</button>
+      </div>
+      <div class="group">
+        <button id="tour">Start guided tour</button>
+        <select id="theme" aria-label="Theme"><option value="midnight">Midnight</option><option value="light">Light</option><option value="desert">Desert</option></select>
+      </div>
+    </nav>
+    <main>
+      <section class="viewport" id="viewport" aria-label="Workflow diagram. Drag to pan and use toolbar to zoom.">
+        <div class="canvas" id="canvas">
+          <svg class="edges" viewBox="0 0 1620 640" role="img" aria-label="Connections between workflow stages">
+            <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="context-stroke"/></marker></defs>
+            <path class="edge" d="M216 306 C235 306 235 306 250 306"/><path class="edge" d="M426 306 C450 306 450 196 470 196"/>
+            <path class="edge" d="M426 306 C450 306 450 406 470 406"/><path class="edge" d="M646 196 C670 196 670 296 690 296"/>
+            <path class="edge" d="M646 406 C670 406 670 296 690 296"/><path class="edge" d="M866 296 C885 296 885 296 900 296"/>
+            <path class="edge" d="M1076 296 C1095 296 1095 296 1110 296"/><path class="edge hot" d="M1286 280 C1310 280 1310 136 1340 136"/>
+            <path class="edge track" d="M1286 296 C1310 296 1310 306 1340 306"/><path class="edge low" d="M1286 312 C1310 312 1310 476 1340 476"/>
+          </svg>
+          <button class="node" data-stage="intake" data-key="inbox" style="left:40px;top:247px"><span class="icon">✉️</span><strong>Job-alert inbox</strong><small>IMAP folder with alerts the user already receives</small><span class="chip">No scraping</span></button>
+          <button class="node" data-stage="intake" data-key="parse" style="left:250px;top:247px"><span class="icon">🧩</span><strong>Normalize & extract</strong><small>Subject, company, role, URL, sender, and text</small><span class="chip">Untrusted input</span></button>
+          <button class="node" data-stage="matching" data-key="location" style="left:470px;top:137px"><span class="icon">📍</span><strong>UAE location</strong><small>Seven emirates plus UAE-only fallback</small><span class="chip">All or selected</span></button>
+          <button class="node" data-stage="matching" data-key="preferences" style="left:470px;top:347px"><span class="icon">🎛️</span><strong>Preferences</strong><small>Roles, exclusions, work mode, national roles</small><span class="chip">Editable config</span></button>
+          <button class="node" data-stage="matching" data-key="score" style="left:690px;top:237px"><span class="icon">⭐</span><strong>Explainable score</strong><small>Weighted signals, penalties, and eligibility</small><span class="chip">0–100</span></button>
+          <button class="node" data-stage="matching" data-key="dedupe" style="left:900px;top:237px"><span class="icon">🧬</span><strong>Duplicate check</strong><small>URL/content fingerprint with expiry window</small><span class="chip">30 days default</span></button>
+          <button class="node" data-stage="matching" data-key="route" style="left:1110px;top:237px"><span class="icon">🔀</span><strong>Score routing</strong><small>Notify, tracker-only, or ignored path</small><span class="chip">Thresholds</span></button>
+          <button class="node" data-stage="outputs" data-key="notify" style="left:1340px;top:77px"><span class="icon">📣</span><strong>Telegram</strong><small>High-confidence match with reasons and link</small><span class="chip">70+ default</span></button>
+          <button class="node" data-stage="outputs" data-key="track" style="left:1340px;top:247px"><span class="icon">📊</span><strong>Tracker row</strong><small>Google Sheets or self-hosted CSV guidance</small><span class="chip">45+ default</span></button>
+          <button class="node" data-stage="outputs" data-key="ignore" style="left:1340px;top:417px"><span class="icon">🗄️</span><strong>Ignore safely</strong><small>No job-site action; optional provider-specific mail archive</small><span class="chip">Below 45</span></button>
+        </div>
+      </section>
+      <aside class="side" aria-live="polite">
+        <h2 id="detailTitle">A public workflow with private credentials</h2>
+        <p id="detailText">Select any node to inspect its responsibility and safeguards. Credentials are added only inside each user's n8n instance.</p>
+        <h3>Key points</h3><ul id="detailList"><li>Processes job-alert email; it never visits the job website.</li><li>Works across all UAE emirates and work arrangements.</li><li>Keeps every score explainable and configurable.</li></ul>
+        <h3>Route legend</h3><div class="legend"><span class="dot"></span><span>High score: notify and track</span><span class="dot track"></span><span>Medium score: tracker only</span><span class="dot low"></span><span>Low score: ignored summary</span></div>
+        <h3>Safety boundary</h3><div class="notice">The workflow extracts links as text. It does not open them, log in, scrape listings, or submit applications.</div>
+      </aside>
+    </main>
+  </div>
+  <script>
+    const details = {
+      inbox: ['Job-alert inbox','Uses a dedicated IMAP folder containing alerts the user requested.',['Credentials stay in n8n’s encrypted credential manager.','A dedicated folder limits unrelated email exposure.','Manual test data is synthetic and works without mailbox access.']],
+      parse: ['Normalize & extract','Converts plain-text or HTML email into a conservative, source-neutral record.',['Extracts displayed text and the first plausible job URL.','Does not fetch or validate the destination page.','Source-specific rules can be added using synthetic fixtures.']],
+      location: ['UAE location detection','Maps common city and emirate aliases to all seven emirates.',['Al Ain maps to Abu Dhabi; RAK maps to Ras Al Khaimah.','Users can choose all UAE or selected emirates.','UAE-only alerts can be accepted when the emirate is missing.']],
+      preferences: ['Job-seeker preferences','One editable configuration controls roles, work modes, employment types, and optional UAE National signals.',['On-site, hybrid, and remote are independent choices.','UAE National roles can be included, required, excluded, or ignored.','No personal preference list is committed to the public template.']],
+      score: ['Explainable scoring','Adds weighted signals and applies explicit penalties before clamping to 0–100.',['Default signals: role 35, location 25, mode 10, national 15, company 10, salary 5.','Excluded keywords subtract 60 by default.','Matched signals travel with the result for inspection.']],
+      dedupe: ['Recent duplicate suppression','Creates a stable fingerprint from the application URL or normalized job identity.',['Default retention is 30 days.','Expired keys are pruned on each run.','Multi-worker deployments should use a shared datastore.']],
+      route: ['Three-way routing','Compares the score with independently configurable notification and tracking thresholds.',['70+ notifies and creates a tracker row.','45–69 creates a tracker row without interruption.','Lower or ineligible items stop without external job-site action.']],
+      notify: ['Telegram notification','Sends concise job details, match reasons, source, and the extracted URL.',['Bot token stays in an n8n credential.','Rich link previews are disabled by default.','Users should verify employer and vacancy independently.']],
+      track: ['Google Sheets or CSV','Builds a normalized row for a personal application tracker.',['The optional Sheets node ships disabled and unconfigured.','CSV guidance is for self-hosted n8n with persistent storage.','Application status remains a separate, deliberate action.']],
+      ignore: ['Safe low-score outcome','Leaves the job site untouched and avoids automatic deletion or application activity.',['The public template leaves source messages in place.','Provider-specific read/archive actions are opt-in.','Nothing is submitted on the job seeker’s behalf.']]
+    };
+    const viewport = document.getElementById('viewport'), canvas = document.getElementById('canvas');
+    let scale = .72, x = 20, y = 44, dragging = false, start = null, tourIndex = -1;
+    const nodes = [...document.querySelectorAll('.node')];
+    const render = () => canvas.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
+    const fit = () => { const box = viewport.getBoundingClientRect(); scale = Math.min((box.width-40)/1620,(box.height-40)/640,1); x=(box.width-1620*scale)/2; y=(box.height-640*scale)/2; render(); };
+    const selectNode = node => { nodes.forEach(n=>n.classList.toggle('selected',n===node)); const d=details[node.dataset.key]; detailTitle.textContent=d[0]; detailText.textContent=d[1]; detailList.innerHTML=d[2].map(v=>`<li>${v}</li>`).join(''); };
+    nodes.forEach(node => node.addEventListener('click',()=>selectNode(node)));
+    document.getElementById('zoomIn').onclick=()=>{scale=Math.min(1.5,scale+.1);render()};
+    document.getElementById('zoomOut').onclick=()=>{scale=Math.max(.35,scale-.1);render()};
+    document.getElementById('fit').onclick=fit;
+    document.getElementById('theme').onchange=e=>document.documentElement.dataset.theme=e.target.value;
+    document.querySelectorAll('.view').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.view').forEach(b=>b.classList.remove('active'));btn.classList.add('active');nodes.forEach(n=>n.classList.toggle('dim',btn.dataset.view!=='all'&&n.dataset.stage!==btn.dataset.view));});
+    viewport.addEventListener('pointerdown',e=>{if(e.target.closest('.node'))return;dragging=true;start={px:e.clientX,py:e.clientY,x,y};viewport.classList.add('dragging');viewport.setPointerCapture(e.pointerId)});
+    viewport.addEventListener('pointermove',e=>{if(!dragging)return;x=start.x+e.clientX-start.px;y=start.y+e.clientY-start.py;render()});
+    viewport.addEventListener('pointerup',()=>{dragging=false;viewport.classList.remove('dragging')});
+    viewport.addEventListener('wheel',e=>{e.preventDefault();const old=scale;scale=Math.max(.35,Math.min(1.5,scale+(e.deltaY<0?.08:-.08)));const r=viewport.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;x=mx-(mx-x)*(scale/old);y=my-(my-y)*(scale/old);render()},{passive:false});
+    document.getElementById('tour').onclick=e=>{tourIndex=(tourIndex+1)%nodes.length;const n=nodes[tourIndex];nodes.forEach(v=>v.classList.remove('pulse','dim'));n.classList.add('pulse');selectNode(n);e.currentTarget.textContent=tourIndex===nodes.length-1?'Restart guided tour':'Next step';const left=parseFloat(n.style.left),top=parseFloat(n.style.top);x=viewport.clientWidth/2-(left+88)*scale;y=viewport.clientHeight/2-(top+59)*scale;render()};
+    window.addEventListener('resize',fit); fit();
+  </script>
+</body>
+</html>
+

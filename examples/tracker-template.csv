@@ -1,0 +1,3 @@
+dedupe_key,date_found,company,job_title,location,work_mode,employment_type,source,match_score,uae_national_role,application_url,status,date_applied,interview_date,notes
+sample-only,2026-09-01T09:00:00.000Z,Example Logistics LLC,Operations Coordinator,Dubai,hybrid,full-time,Example Jobs,90,true,https://jobs.example.invalid/vacancies/operations-coordinator-123,New,,,
+

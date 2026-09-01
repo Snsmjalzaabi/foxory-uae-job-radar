@@ -1,0 +1,21 @@
+{
+  "rolePresets": {
+    "operations": ["operations", "operations coordinator", "operations executive"],
+    "technology": ["software", "developer", "data analyst", "cybersecurity", "IT support"],
+    "engineering": ["engineer", "engineering", "maintenance", "project engineer"],
+    "healthcare": ["nurse", "doctor", "pharmacist", "clinical", "medical"],
+    "finance": ["accountant", "finance", "audit", "treasury", "financial analyst"],
+    "humanResources": ["human resources", "HR", "talent acquisition", "recruitment"],
+    "logistics": ["logistics", "supply chain", "warehouse", "procurement", "shipping"]
+  },
+  "locationAliases": {
+    "Abu Dhabi": ["abu dhabi", "al ain", "al ain city", "western region"],
+    "Dubai": ["dubai", "jebel ali"],
+    "Sharjah": ["sharjah", "khor fakkan", "kalba"],
+    "Ajman": ["ajman"],
+    "Umm Al Quwain": ["umm al quwain", "umm al-quwain", "uaq"],
+    "Ras Al Khaimah": ["ras al khaimah", "ras al-khaimah", "rak"],
+    "Fujairah": ["fujairah"]
+  }
+}
+

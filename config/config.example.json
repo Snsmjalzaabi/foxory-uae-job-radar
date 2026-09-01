@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "locations": {
+    "mode": "all_uae",
+    "emirates": [
+      "Abu Dhabi",
+      "Dubai",
+      "Sharjah",
+      "Ajman",
+      "Umm Al Quwain",
+      "Ras Al Khaimah",
+      "Fujairah"
+    ],
+    "allowUnspecifiedUae": true
+  },
+  "roles": {
+    "include": [
+      "operations",
+      "coordinator",
+      "administration",
+      "project management",
+      "business support"
+    ],
+    "exclude": [
+      "commission only",
+      "door to door"
+    ]
+  },
+  "workModes": [
+    "on-site",
+    "hybrid",
+    "remote"
+  ],
+  "employmentTypes": [
+    "full-time",
+    "part-time",
+    "contract",
+    "internship"
+  ],
+  "uaeNationalRoles": {
+    "mode": "include",
+    "keywords": [
+      "UAE National",
+      "Emirati",
+      "Emiratisation",
+      "Emiratization"
+    ]
+  },
+  "preferredCompanies": [],
+  "salary": {
+    "minimumAed": 0,
+    "rewardWhenMentioned": true
+  },
+  "scoring": {
+    "role": 35,
+    "location": 25,
+    "workMode": 10,
+    "uaeNational": 15,
+    "preferredCompany": 10,
+    "salaryMentioned": 5,
+    "excludedKeywordPenalty": 60,
+    "notifyAt": 70,
+    "trackAt": 45
+  },
+  "duplicateWindowDays": 30,
+  "telegram": {
+    "enabled": true,
+    "chatId": "REPLACE_WITH_YOUR_CHAT_ID",
+    "disableWebPagePreview": true
+  },
+  "tracking": {
+    "mode": "none",
+    "googleSheetId": "REPLACE_WITH_YOUR_SHEET_ID",
+    "sheetName": "Jobs"
+  }
+}
+

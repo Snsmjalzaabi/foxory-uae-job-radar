@@ -1,0 +1,200 @@
+{
+  "name": "Foxory UAE Job Radar",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000001",
+      "name": "Manual Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-1040, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { subject: 'New match: Operations Coordinator in Dubai', from: { text: 'Example Jobs <alerts@example.invalid>', value: [{ name: 'Example Jobs', address: 'alerts@example.invalid' }] }, date: new Date().toISOString(), textPlain: `Operations Coordinator\nExample Logistics LLC\nDubai, United Arab Emirates\nHybrid · Full-time\n\nWe are looking for an operations coordinator with project administration and business support experience. This vacancy welcomes UAE Nationals and other qualified applicants. Salary: AED 12,000–15,000 per month.\n\nView job: https://jobs.example.invalid/vacancies/operations-coordinator-123` } }];"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000002",
+      "name": "Synthetic Sample Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-820, 340]
+    },
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "nothing",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "forceReconnect": 60
+        }
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000003",
+      "name": "Job Alert Inbox",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [-1040, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = {\n  schemaVersion: 1,\n  locations: {\n    mode: 'all_uae', // 'all_uae' or 'selected'\n    emirates: ['Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah'],\n    allowUnspecifiedUae: true,\n  },\n  roles: {\n    include: ['operations', 'coordinator', 'administration', 'project management', 'business support'],\n    exclude: ['commission only', 'door to door'],\n  },\n  workModes: ['on-site', 'hybrid', 'remote'],\n  employmentTypes: ['full-time', 'part-time', 'contract', 'internship'],\n  uaeNationalRoles: {\n    mode: 'include', // 'include', 'only', 'exclude', or 'ignore'\n    keywords: ['UAE National', 'Emirati', 'Emiratisation', 'Emiratization'],\n  },\n  preferredCompanies: [],\n  salary: { minimumAed: 0, rewardWhenMentioned: true },\n  scoring: {\n    role: 35,\n    location: 25,\n    workMode: 10,\n    uaeNational: 15,\n    preferredCompany: 10,\n    salaryMentioned: 5,\n    excludedKeywordPenalty: 60,\n    notifyAt: 70,\n    trackAt: 45,\n  },\n  duplicateWindowDays: 30,\n  telegram: {\n    enabled: true,\n    chatId: 'REPLACE_WITH_YOUR_CHAT_ID',\n    disableWebPagePreview: true,\n  },\n  tracking: {\n    mode: 'none', // 'none', 'google_sheets', or 'csv'\n    googleSheetId: 'REPLACE_WITH_YOUR_SHEET_ID',\n    sheetName: 'Jobs',\n  },\n};\n\nconst validModes = ['include', 'only', 'exclude', 'ignore'];\nif (!validModes.includes(config.uaeNationalRoles.mode)) throw new Error('Invalid UAE National mode');\nif (!['all_uae', 'selected'].includes(config.locations.mode)) throw new Error('Invalid location mode');\nif (config.scoring.notifyAt < config.scoring.trackAt) throw new Error('notifyAt must be greater than or equal to trackAt');\nif (config.scoring.notifyAt > 100 || config.scoring.trackAt < 0) throw new Error('Score thresholds must be between 0 and 100');\n\nreturn $input.all().map(item => ({ json: { ...item.json, _config: config }, binary: item.binary }));"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000004",
+      "name": "Load Configuration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-580, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const aliases = {\n  'Abu Dhabi': ['abu dhabi', 'al ain', 'western region'],\n  Dubai: ['dubai', 'jebel ali'],\n  Sharjah: ['sharjah', 'khor fakkan', 'kalba'],\n  Ajman: ['ajman'],\n  'Umm Al Quwain': ['umm al quwain', 'umm al-quwain', 'uaq'],\n  'Ras Al Khaimah': ['ras al khaimah', 'ras al-khaimah', 'rak'],\n  Fujairah: ['fujairah'],\n};\n\nconst cleanHtml = value => String(value || '')\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/gi, ' ')\n  .replace(/&amp;/gi, '&')\n  .replace(/&#39;/gi, \"'\")\n  .replace(/&quot;/gi, '\"')\n  .replace(/\\s+/g, ' ')\n  .trim();\nconst asText = value => typeof value === 'string' ? value : JSON.stringify(value || '');\nconst includesAny = (text, values) => values.filter(value => text.includes(String(value).toLowerCase()));\nconst firstMeaningfulLine = lines => lines.find(line => line.length > 2 && !/^view job|^apply|^http/i.test(line)) || '';\n\nreturn $input.all().map(item => {\n  const input = item.json;\n  const config = input._config;\n  const subject = asText(input.subject).trim();\n  const plain = asText(input.textPlain || input.text || input.textAsHtml);\n  const htmlText = cleanHtml(input.html || input.htmlBody);\n  const rawText = [subject, plain, htmlText].filter(Boolean).join('\\n');\n  const normalizedText = rawText.toLowerCase().replace(/\\s+/g, ' ').trim();\n  const lines = plain.split(/\\r?\\n/).map(line => line.trim()).filter(Boolean);\n\n  const urlMatches = rawText.match(/https?:\\/\\/[^\\s<>\"']+/gi) || [];\n  const applicationUrl = (urlMatches.find(url => /job|career|vacan|position|apply/i.test(url)) || urlMatches[0] || '')\n    .replace(/[),.;]+$/, '');\n\n  const fromValue = input.from || input.sender || '';\n  const fromText = typeof fromValue === 'string' ? fromValue : (fromValue.text || fromValue.value?.[0]?.name || fromValue.value?.[0]?.address || '');\n  const sourceRules = [\n    ['LinkedIn', /linkedin/i], ['Indeed', /indeed/i], ['Bayt', /bayt/i],\n    ['GulfTalent', /gulftalent/i], ['Naukrigulf', /naukri.?gulf/i], ['Glassdoor', /glassdoor/i],\n  ];\n  const source = sourceRules.find(([, rule]) => rule.test(fromText + ' ' + normalizedText))?.[0] || (fromText.match(/^([^<]+)/)?.[1]?.trim() || 'Email alert');\n\n  let title = subject\n    .replace(/^(new |recommended |daily |weekly )?(job )?(match|alert|opportunity|vacancy)[: –-]*/i, '')\n    .replace(/\\s+(in|at)\\s+(abu dhabi|dubai|sharjah|ajman|umm al quwain|ras al khaimah|fujairah).*$/i, '')\n    .trim();\n  if (!title || title.length > 140) title = firstMeaningfulLine(lines) || 'Untitled role';\n  const titleIndex = lines.findIndex(line => line.toLowerCase() === title.toLowerCase());\n  const companyCandidate = titleIndex >= 0 ? lines[titleIndex + 1] : lines[1];\n  const company = companyCandidate && companyCandidate.length < 120 && !/uae|emirates|remote|hybrid|full-time|part-time|contract/i.test(companyCandidate)\n    ? companyCandidate\n    : (fromText.match(/^([^<]+)/)?.[1]?.trim() || 'Unknown company');\n\n  const detectedLocations = Object.entries(aliases)\n    .filter(([, values]) => values.some(value => normalizedText.includes(value)))\n    .map(([emirate]) => emirate);\n  const mentionsUae = /\\buae\\b|united arab emirates/i.test(rawText);\n  const allowedLocations = config.locations.mode === 'all_uae' ? Object.keys(aliases) : config.locations.emirates;\n  const locationMatch = detectedLocations.some(location => allowedLocations.includes(location)) ||\n    (detectedLocations.length === 0 && mentionsUae && config.locations.allowUnspecifiedUae);\n\n  const workMode = /\\bhybrid\\b/i.test(rawText) ? 'hybrid' : /\\bremote\\b|work from home/i.test(rawText) ? 'remote' : /on[ -]?site|office[ -]?based/i.test(rawText) ? 'on-site' : 'unspecified';\n  const employmentType = /part[ -]?time/i.test(rawText) ? 'part-time' : /full[ -]?time|permanent/i.test(rawText) ? 'full-time' : /intern(ship)?/i.test(rawText) ? 'internship' : /contract|temporary|freelance/i.test(rawText) ? 'contract' : 'unspecified';\n  const uaeNationalRole = includesAny(normalizedText, config.uaeNationalRoles.keywords.map(value => value.toLowerCase())).length > 0;\n  const matchedRoleKeywords = includesAny(normalizedText, config.roles.include.map(value => value.toLowerCase()));\n  const excludedKeywords = includesAny(normalizedText, config.roles.exclude.map(value => value.toLowerCase()));\n  const preferredCompany = config.preferredCompanies.some(value => company.toLowerCase().includes(String(value).toLowerCase()));\n  const salaryMatch = rawText.match(/(?:AED|د\\.?إ)\\s*[\\d,]+(?:\\s*[-–to]+\\s*(?:AED|د\\.?إ)?\\s*[\\d,]+)?(?:\\s*(?:per|\\/)\\s*(?:month|year|annum))?/i);\n\n  const matchedSignals = [];\n  let score = 0;\n  if (matchedRoleKeywords.length) { score += config.scoring.role; matchedSignals.push('role'); }\n  if (locationMatch) { score += config.scoring.location; matchedSignals.push('location'); }\n  if (workMode !== 'unspecified' && config.workModes.includes(workMode)) { score += config.scoring.workMode; matchedSignals.push('work mode'); }\n  if (uaeNationalRole && ['include', 'only'].includes(config.uaeNationalRoles.mode)) { score += config.scoring.uaeNational; matchedSignals.push('UAE National'); }\n  if (preferredCompany) { score += config.scoring.preferredCompany; matchedSignals.push('preferred company'); }\n  if (salaryMatch && config.salary.rewardWhenMentioned) { score += config.scoring.salaryMentioned; matchedSignals.push('salary mentioned'); }\n  if (excludedKeywords.length) { score -= config.scoring.excludedKeywordPenalty; matchedSignals.push('excluded keyword penalty'); }\n\n  const workModeEligible = workMode === 'unspecified' || config.workModes.includes(workMode);\n  const employmentEligible = employmentType === 'unspecified' || config.employmentTypes.includes(employmentType);\n  const nationalEligible = config.uaeNationalRoles.mode === 'ignore' || config.uaeNationalRoles.mode === 'include' ||\n    (config.uaeNationalRoles.mode === 'only' && uaeNationalRole) ||\n    (config.uaeNationalRoles.mode === 'exclude' && !uaeNationalRole);\n  const eligible = locationMatch && workModeEligible && employmentEligible && nationalEligible && excludedKeywords.length === 0;\n  if (!eligible) score = Math.min(score, config.scoring.trackAt - 1);\n  score = Math.max(0, Math.min(100, Math.round(score)));\n\n  return { json: {\n    _config: config, subject, source, title, company,\n    location: detectedLocations.join(', ') || (mentionsUae ? 'UAE (emirate unspecified)' : 'Unspecified'),\n    detectedLocations, workMode, employmentType, uaeNationalRole,\n    salaryText: salaryMatch?.[0] || '', applicationUrl,\n    matchedRoleKeywords, excludedKeywords, matchedSignals, eligible, score,\n    receivedAt: input.date || input.receivedDate || new Date().toISOString(),\n    normalizedText: normalizedText.slice(0, 12000),\n  }, binary: item.binary };\n});"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000005",
+      "name": "Score Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-340, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const store = $getWorkflowStaticData('global');\nstore.seenJobs = store.seenJobs || {};\nconst now = Date.now();\n\nconst hash = value => {\n  let h = 0x811c9dc5;\n  for (let i = 0; i < value.length; i++) {\n    h ^= value.charCodeAt(i);\n    h = Math.imul(h, 0x01000193);\n  }\n  return (h >>> 0).toString(16).padStart(8, '0');\n};\n\nconst output = [];\nfor (const item of $input.all()) {\n  const retentionMs = Math.max(1, Number(item.json._config.duplicateWindowDays || 30)) * 86400000;\n  for (const [key, timestamp] of Object.entries(store.seenJobs)) {\n    if (now - Number(timestamp) > retentionMs) delete store.seenJobs[key];\n  }\n  const identity = (item.json.applicationUrl || [item.json.company, item.json.title, item.json.location].join('|')).toLowerCase().trim();\n  const dedupeKey = hash(identity);\n  if (store.seenJobs[dedupeKey]) continue;\n  store.seenJobs[dedupeKey] = now;\n  output.push({ json: { ...item.json, dedupeKey, duplicate: false }, binary: item.binary });\n}\nreturn output;"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000006",
+      "name": "Remove Recent Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-100, 220]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+                "conditions": [{"leftValue": "={{ $json.score }}", "rightValue": "={{ $json._config.scoring.notifyAt }}", "operator": {"type": "number", "operation": "gte"}, "id": "notify-score"}],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Notify"
+            },
+            {
+              "conditions": {
+                "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+                "conditions": [{"leftValue": "={{ $json.score }}", "rightValue": "={{ $json._config.scoring.trackAt }}", "operator": {"type": "number", "operation": "gte"}, "id": "track-score"}],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Track only"
+            }
+          ]
+        },
+        "options": {"fallbackOutput": "extra", "renameFallbackOutput": "Ignored"}
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000007",
+      "name": "Route by Score",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [140, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const j = item.json;\n  const lines = [\n    `🇦🇪 UAE JOB MATCH · ${j.score}/100`, '',\n    j.title, j.company, '',\n    `📍 ${j.location}`,\n    `🏢 ${j.workMode} · ${j.employmentType}`,\n    `⭐ Matched: ${j.matchedSignals.join(', ') || 'general criteria'}`, '',\n    `Source: ${j.source}`,\n  ];\n  if (j.salaryText) lines.push(`Salary text: ${j.salaryText}`);\n  if (j.applicationUrl) lines.push(`Open job: ${j.applicationUrl}`);\n  lines.push('', 'Verify the vacancy and employer before applying.');\n  return { json: { ...j, telegramText: lines.join('\\n') }, binary: item.binary };\n});"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000008",
+      "name": "Build Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 40]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json._config.telegram.chatId }}",
+        "text": "={{ $json.telegramText }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disableWebPagePreview": true
+        }
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000009",
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, 40]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const j = item.json;\n  return { json: {\n    dedupe_key: j.dedupeKey,\n    date_found: new Date(j.receivedAt).toISOString(),\n    company: j.company,\n    job_title: j.title,\n    location: j.location,\n    work_mode: j.workMode,\n    employment_type: j.employmentType,\n    source: j.source,\n    match_score: j.score,\n    uae_national_role: j.uaeNationalRole,\n    application_url: j.applicationUrl,\n    status: 'New',\n    date_applied: '',\n    interview_date: '',\n    notes: j.matchedSignals.join(', '),\n  } };\n});"
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000010",
+      "name": "Build Tracker Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [430, 260]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {"__rl": true, "value": "", "mode": "list", "cachedResultName": "Select your tracker"},
+        "sheetName": {"__rl": true, "value": "", "mode": "list", "cachedResultName": "Jobs"},
+        "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": [], "schema": [], "attemptToConvertTypes": false, "convertFieldsToString": false},
+        "options": {}
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000011",
+      "name": "Append to Google Sheets (optional)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [690, 260],
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000012",
+      "name": "Ignored Summary",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [430, 500]
+    },
+    {
+      "parameters": {
+        "content": "## Configure before activation\n1. Edit **Load Configuration**\n2. Select IMAP credentials on **Job Alert Inbox**\n3. Select Telegram credentials and set the chat ID\n4. Optionally configure Google Sheets or CSV\n\nNo credentials or personal identifiers are included in this export.",
+        "height": 300,
+        "width": 420,
+        "color": 5
+      },
+      "id": "b718c0e2-5f89-4dd2-b10d-000000000013",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-560, -180]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Test": {"main": [[{"node": "Synthetic Sample Alert", "type": "main", "index": 0}]]},
+    "Synthetic Sample Alert": {"main": [[{"node": "Load Configuration", "type": "main", "index": 0}]]},
+    "Job Alert Inbox": {"main": [[{"node": "Load Configuration", "type": "main", "index": 0}]]},
+    "Load Configuration": {"main": [[{"node": "Score Job", "type": "main", "index": 0}]]},
+    "Score Job": {"main": [[{"node": "Remove Recent Duplicates", "type": "main", "index": 0}]]},
+    "Remove Recent Duplicates": {"main": [[{"node": "Route by Score", "type": "main", "index": 0}]]},
+    "Route by Score": {"main": [
+      [{"node": "Build Telegram Message", "type": "main", "index": 0}, {"node": "Build Tracker Row", "type": "main", "index": 0}],
+      [{"node": "Build Tracker Row", "type": "main", "index": 0}],
+      [{"node": "Ignored Summary", "type": "main", "index": 0}]
+    ]},
+    "Build Telegram Message": {"main": [[{"node": "Send Telegram Alert", "type": "main", "index": 0}]]},
+    "Build Tracker Row": {"main": [[{"node": "Append to Google Sheets (optional)", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "versionId": "b718c0e2-5f89-4dd2-b10d-000000000099",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
+
